@@ -10,6 +10,10 @@ import java.io.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static javax.swing.JOptionPane.showMessageDialog;
+import static test.Huffman.buildTree;
+import static test.Huffman.output;
+import static test.Huffman.printCodes;
+
 
 /**
  *
@@ -95,81 +99,74 @@ public class LZ77 extends javax.swing.JFrame {
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {                                         
 
-        List<Integer> tagsList = new ArrayList<Integer>();
-        Map<String,Integer> DIC = new HashMap<String,Integer>();
-        String s="",tmp,textfieldin,cur="";
-        int dictionarySize = 128;
+        String EncodedString="",tmp="",in="",textfieldin,cur="";
         try {
-            
             textfieldin = jTextField1.getText();
             File input = new File (textfieldin);
-            File tags = new File ("Alltags.txt");
-            PrintWriter output = null;
-            try {
-                output = new PrintWriter(tags);
-            } catch (FileNotFoundException ex) {
-                Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
-        }
             Scanner filein = new Scanner (input);
-            while (filein.hasNextLine()){  tmp = filein.nextLine(); s+=tmp;} 
-            
-        for (int i = 0; i < dictionarySize; i++) DIC .put("" + (char)i, i);
-        for (int i=0;i<s.length();i++) {
-            String sub = cur + s.charAt(i);
-            if (DIC .containsKey(sub))  cur = sub;
-            else {
-                tagsList.add(DIC .get(cur));//found already existing add to add it to dict
-                DIC .put(sub, dictionarySize++); //add sub to dictionary since it doesn't exist
-                cur = "" +  s.charAt(i); //begin next substring from first non found char
-            }
-        }
- 
-        if (cur.equals("") == false)  tagsList.add(DIC .get(cur)); //handle last tag
-        for (Integer f : tagsList) output.println(f);
-        filein.close();
-        output.close();
+            while (filein.hasNextLine()){  tmp = filein.nextLine(); in+=tmp;} 
+	    int[] charFreqs = new int[256];
+	    for (char c : tmp.toCharArray())  charFreqs[c]++;
+	    HuffmanTree tree = buildTree(charFreqs);
+            printCodes(tree, new StringBuffer(),true);
+            output.close();
+            filein.close();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
         } 
+        
+       Map<Character,String> Code  = new HashMap<Character,String>();
+       File cy = new File ("Cypher.txt");
+       Scanner codein = null;
+        try {
+            codein = new Scanner (cy);
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       while (codein.hasNextLine()){ char c = codein.next().charAt(0); String cd = codein.nextLine();  Code.put(c, cd);}
+       File outEncode = new File ("code.txt");
+       PrintWriter o = null;
+        try {
+            o = new PrintWriter (outEncode);
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       for (int i=0;i<in.length();i++) o.println(Code.get(in.charAt(i)));
+       o.close();
+       
        showMessageDialog(this,"Compression is complete");
     }                                        
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {                                         
 
-        List<Integer> tagsList = new ArrayList <Integer>();
-        Map<Integer,String> DIC  = new HashMap<Integer,String>();
-        int dictionarySize = 128;
         
-        File tags = new File ("Alltags.txt");
-        Scanner tagsin = null;
+       Map<String,Character> Code  = new HashMap<String,Character>();
+       File cy = new File ("Cypher.txt");
+       Scanner codein = null;
         try {
-            tagsin = new Scanner (tags);
+            codein = new Scanner (cy);
         } catch (FileNotFoundException ex) {
             Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
         }
-         PrintWriter output2 = null;
-         File out = new File ("output.txt");
+       while (codein.hasNextLine()){ char c = codein.next().charAt(0); String cd = codein.nextLine();  Code.put(cd, c);}
+       codein.close();
+        PrintWriter output2 = null;
+        File out = new File ("output.txt");
+       try {
+           output2 = new PrintWriter(out);
+       } catch (FileNotFoundException ex) {
+           Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+       }
+       File inCode = new File ("code.txt");
         try {
-            output2 = new PrintWriter(out);
+            codein = new Scanner (inCode);
         } catch (FileNotFoundException ex) {
             Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
         }
-         
-        for (int i = 0; i < dictionarySize; i++) DIC .put(i, "" + (char)i);
-        while (tagsin.hasNext()){ int t = tagsin.nextInt(); tagsList.add(t);}
-        char FirstChar = (char)(int) tagsList.get(0);
-        tagsList.remove(0);
-        String prev = "" + FirstChar,cur=""; //first symbol so add nothing to dict
-        String ans = prev;
-        for (int i : tagsList) {
-            if (DIC .containsKey(i)) cur = DIC .get(i); //already exist in dict
-            else if (i == dictionarySize) cur = prev + prev.charAt(0); //sepcial case when i can't find value in dict ( ans += prev + prev[0])
-            ans += cur;
-            DIC .put(dictionarySize++, prev + cur.charAt(0)); //concatenate all symbols from prevstep + firstsymbol at current
-            prev = cur;
-        }
-        output2.println(ans);
-        output2.close();
+       String s="";
+       while (codein.hasNextLine()){String cd = codein.nextLine();  if (!cd.equals(""))s+=Code.get(cd); }
+       output2.println(s);
+       output2.close();
         showMessageDialog(this,"Decompression is complete");
     }                                        
 

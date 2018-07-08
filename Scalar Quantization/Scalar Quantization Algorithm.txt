@@ -10,6 +10,10 @@ import java.io.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static javax.swing.JOptionPane.showMessageDialog;
+import static test.Image.readImage;
+import static test.Image.writeImage;
+import test.LBG.*;
+
 
 /**
  *
@@ -94,82 +98,111 @@ public class LZ77 extends javax.swing.JFrame {
     }// </editor-fold>                        
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {                                         
-
-        List<Integer> tagsList = new ArrayList<Integer>();
-        Map<String,Integer> DIC = new HashMap<String,Integer>();
-        String s="",tmp,textfieldin,cur="";
-        int dictionarySize = 128;
+        /*Declerations*/
+        int ImageWidth = 0, ImageHight = 0,NumQuntizatioLevels = 2;
+        int Pixels [][] = new int [1000][1000];
+        int Range [] = new int[10000];
+        Scanner in = null;
+        LBG op = new LBG();
+        /*Read Image into arraylist */
+        Pixels = readImage("E:\\Programming\\IDEs\\Netbeans\\Netbeans workspace\\LZ77Gui\\lena.jpg");
+        ImageWidth = Image.width;
+        ImageHight = Image.height;
+        ArrayList<Integer> RawData = new ArrayList<Integer>();
+        
+        /*Test Slide input */
+        /*File slide = new File ("ArrayListInput.txt");
         try {
-            
-            textfieldin = jTextField1.getText();
-            File input = new File (textfieldin);
-            File tags = new File ("Alltags.txt");
-            PrintWriter output = null;
-            try {
-                output = new PrintWriter(tags);
-            } catch (FileNotFoundException ex) {
-                Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
-        }
-            Scanner filein = new Scanner (input);
-            while (filein.hasNextLine()){  tmp = filein.nextLine(); s+=tmp;} 
-            
-        for (int i = 0; i < dictionarySize; i++) DIC .put("" + (char)i, i);
-        for (int i=0;i<s.length();i++) {
-            String sub = cur + s.charAt(i);
-            if (DIC .containsKey(sub))  cur = sub;
-            else {
-                tagsList.add(DIC .get(cur));//found already existing add to add it to dict
-                DIC .put(sub, dictionarySize++); //add sub to dictionary since it doesn't exist
-                cur = "" +  s.charAt(i); //begin next substring from first non found char
-            }
-        }
- 
-        if (cur.equals("") == false)  tagsList.add(DIC .get(cur)); //handle last tag
-        for (Integer f : tagsList) output.println(f);
-        filein.close();
-        output.close();
+            in = new Scanner(slide);
         } catch (FileNotFoundException ex) {
             Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
-        } 
+        }
+        while (in.hasNextInt()) { int val = in.nextInt(); RawData.add(val); }
+        in.close();*/
+        for(int x=0;x<ImageWidth;x++)  for(int y=0;y<ImageHight;y++) RawData.add(Pixels[y][x]);
+                
+            
+        /*Encoding*/
+        op.split(0,RawData,NumQuntizatioLevels);
+        ArrayList<Integer> Averages = new ArrayList<Integer>();
+        Averages = op.LastAverages;
+        Collections.sort(Averages);
+        
+        /*Building Ranges and Quantizer*/
+        int CurAv = 0 ,PrevAv =0;
+        int NumOfRanges = Averages.size();
+        for (int i = 1 ;i<NumOfRanges;i++){
+            PrevAv = Averages.get(i-1);
+            CurAv = Averages.get(i);
+            int CurRange = (PrevAv + CurAv) /2;
+            Range [i-1] = CurRange;
+        }
+        Range[NumOfRanges-1] = 100000;
+        
+        
+        /*Writing Averages to file Quantizer*/
+        File q = new File ("Quantizer.txt");
+        PrintWriter out = null;
+        try {
+            out = new PrintWriter(q);
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        for (int f : Averages)out.println(f);
+        out.close();
+        
+        
+        /*Compressing RawDAta */
+        try {
+            
+            out = new PrintWriter("Q.txt");
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        for (int f : RawData){
+            if (f<= Range[0]) out.println(0);
+            for (int i=1;i<NumOfRanges;i++) if (f>Range[i-1] && f<=Range[i]) {out.println(i); break;}
+        }
+        out.close();
+        
        showMessageDialog(this,"Compression is complete");
     }                                        
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {                                         
-
-        List<Integer> tagsList = new ArrayList <Integer>();
-        Map<Integer,String> DIC  = new HashMap<Integer,String>();
-        int dictionarySize = 128;
+       ArrayList <Integer> QuantizedData = new ArrayList <Integer> ();
+       int Quantizer [] = new int[100000];
+       int Pixels [][] = new int [1000][1000];
+       /*Reading Quantizer*/
+       Scanner in = null;
+        try {
+            in = new Scanner (new File("Quantizer.txt"));
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        int i =0;
+       while (in.hasNextInt()) { int num = in.nextInt(); Quantizer[i] = num; i++;}
+       in.close();
+       
+       /*Decoding*/
+        try {
+            in = new Scanner (new File("Q.txt"));
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        while (in.hasNextInt()) { int num = in.nextInt(); int QInverse  = Quantizer[num]; QuantizedData.add(QInverse);  }      
+        in.close();
         
-        File tags = new File ("Alltags.txt");
-        Scanner tagsin = null;
-        try {
-            tagsin = new Scanner (tags);
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
-        }
-         PrintWriter output2 = null;
-         File out = new File ("output.txt");
-        try {
-            output2 = new PrintWriter(out);
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(LZ77.class.getName()).log(Level.SEVERE, null, ex);
-        }
-         
-        for (int i = 0; i < dictionarySize; i++) DIC .put(i, "" + (char)i);
-        while (tagsin.hasNext()){ int t = tagsin.nextInt(); tagsList.add(t);}
-        char FirstChar = (char)(int) tagsList.get(0);
-        tagsList.remove(0);
-        String prev = "" + FirstChar,cur=""; //first symbol so add nothing to dict
-        String ans = prev;
-        for (int i : tagsList) {
-            if (DIC .containsKey(i)) cur = DIC .get(i); //already exist in dict
-            else if (i == dictionarySize) cur = prev + prev.charAt(0); //sepcial case when i can't find value in dict ( ans += prev + prev[0])
-            ans += cur;
-            DIC .put(dictionarySize++, prev + cur.charAt(0)); //concatenate all symbols from prevstep + firstsymbol at current
-            prev = cur;
-        }
-        output2.println(ans);
-        output2.close();
+        /*Write to image */
+         for(int x=0;x<Image.width ;x++){
+            for(int y=0;y<Image.height;y++){
+                Pixels[y][x] = QuantizedData.get(0);
+                QuantizedData.remove(0);
+            }
+         }
+        String Path = "E:\\Programming\\IDEs\\Netbeans\\Netbeans workspace\\LZ77Gui\\tena.jpg";
+        writeImage(Pixels,Path,Image.width,Image.height);
+  
+        
         showMessageDialog(this,"Decompression is complete");
     }                                        
 
